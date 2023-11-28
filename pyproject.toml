@@ -15,7 +15,7 @@ keywords = ["autogen", "assistent", "agent", "multiple agents", "llm", "gpt-4", 
 requires-python = ">=3.8"
 
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 2 - Pre-Alpha",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -41,8 +41,8 @@ dynamic = ["version"]
 
 dependencies = [
     "pyautogen>=0.2.0,<0.3",
-    "google-api-python-client>=2.70.0,<3",
-    "pydantic>=2.0"
+    "pydantic>=2.0",
+    "docstring-parser>=0.15",
 ]
 
 [project.optional-dependencies]
@@ -99,6 +99,8 @@ publish = ["hatch==1.7.0"]
 dev = ["fastagents[docs,lint,testing,devdocs,publish]"]
 
 [project.urls]
+Homepage = "https://fastagents.airt.ai/latest/"
+# Documentation = "https://fastagents.airt.ai/latest/getting-started/"
 Tracker = "https://github.com/airtai/fastagents/issues"
 Source = "https://github.com/airtai/fastagents"
 Discord = "https://discord.gg/qFm6aSqq59"
@@ -114,6 +116,9 @@ exclude = [
 ]
 
 [tool.mypy]
+plugins = [
+  "pydantic.mypy"
+]
 strict = true
 python_version = "3.10"
 ignore_missing_imports = true

@@ -6,4 +6,15 @@
             - [AutogenAgent](api/fastagents/autogen/AutogenAgent.md)
             - agent
                 - [AutogenAgent](api/fastagents/autogen/agent/AutogenAgent.md)
+                - [AutogenTeam](api/fastagents/autogen/agent/AutogenTeam.md)
+                - [AzureLLMConfig](api/fastagents/autogen/agent/AzureLLMConfig.md)
+                - [AzureOpenAIAPIVersions](api/fastagents/autogen/agent/AzureOpenAIAPIVersions.md)
+                - [OpenAILLMConfig](api/fastagents/autogen/agent/OpenAILLMConfig.md)
+                - [OpenAIModel](api/fastagents/autogen/agent/OpenAIModel.md)
+        - utils
+            - docstring
+                - [Function](api/fastagents/utils/docstring/Function.md)
+                - [Parameter](api/fastagents/utils/docstring/Parameter.md)
+                - [Parameters](api/fastagents/utils/docstring/Parameters.md)
+                - [parse_function](api/fastagents/utils/docstring/parse_function.md)
 - [Release Notes](release.md)
