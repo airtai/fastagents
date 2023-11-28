@@ -22,7 +22,7 @@ jobs:
         run: |
           set -ux
           python -m pip install --upgrade pip
-          pip install -e ".[docs,lint]"
+          pip install -e ".[docs,lint,testing]"
       - name: Run mypy
         shell: bash
         run: mypy fastagents tests
