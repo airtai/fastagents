@@ -7,17 +7,8 @@ from autogen.oai.client import OpenAIWrapper
 from fastagents.autogen.agent import (
     AutogenAgent,
     AzureLLMConfig,
-    AzureOpenAIAPIVersions,
     OpenAILLMConfig,
-    OpenAIModel,
 )
-
-
-class TestAzureOpenAIAPIVersions:
-    def test___init__(self) -> None:
-        azure_open_ai_api_versions = AzureOpenAIAPIVersions.v2023_12_01_preview
-        assert isinstance(azure_open_ai_api_versions, str)
-        assert azure_open_ai_api_versions is not None
 
 
 class TestAzureLLMConfig:
@@ -57,7 +48,7 @@ class TestAzureOpenAIConfig:
         with patch("autogen.oai.client.OpenAI.__init__") as mock:
             mock.return_value = None
             config = OpenAILLMConfig(
-                model=OpenAIModel.gpt_4_1106_preview,
+                model="gpt-4-1106-preview",
                 api_key="my-api-key",  # pragma: allowlist secret
             )
 

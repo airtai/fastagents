@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, get_type_hints
+from typing import Any, Callable, Dict, List, get_type_hints
 
 import docstring_parser
 from pydantic import BaseModel, Field
@@ -17,13 +17,29 @@ class Parameters(BaseModel):
     properties: Dict[str, Parameter]
 
 
-class Function(BaseModel):
+class FunctionInner(BaseModel):
     description: str = Field(..., description="Description of the function")
     name: str = Field(..., description="Name of the function")
     parameters: Parameters = Field(..., description="Parameters of the function")
 
 
-def parse_function(f: Callable[..., Any]) -> Function:
+class Function(BaseModel):
+    type: Literal["function"] = Field("function")
+    function: FunctionInner
+
+
+class Functions(BaseModel):
+    description: Literal[
+        "A list of functions the model may generate JSON inputs for."
+    ] = Field("A list of functions the model may generate JSON inputs for.")
+    type: Literal["array"] = Field("array")
+    minItems: Literal[1] = Field(1)
+    items: List[Function] = Field(
+        ..., description="A list of functions the model may generate JSON inputs for."
+    )
+
+
+def _parse_function(f: Callable[..., Any]) -> FunctionInner:
     """Parse a function into a Function object"""
     type_hints = get_type_hints(f)
     # check that we have all type hints for non-default variables
@@ -47,10 +63,14 @@ def parse_function(f: Callable[..., Any]) -> Function:
         if parsed_docstring and parsed_docstring.short_description is not None
         else f.__name__
     )
-    function = Function(
+    function = FunctionInner(
         description=f_description,
         name=f.__name__,
         parameters=parameters,
     )
 
     return function
+
+
+def parse_functions(functions: List[Callable[..., Any]]) -> Functions:
+    return Functions(items=[_parse_function(f) for f in functions])

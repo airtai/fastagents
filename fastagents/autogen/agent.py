@@ -1,17 +1,10 @@
-from enum import Enum
 from typing import Any, Callable, Generic, List, Optional, Type, TypeVar
 
-from autogen.agentchat import Agent, GroupChat
+from autogen.agentchat import Agent
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
-
-class AzureOpenAIAPIVersions(str, Enum):
-    v2023_12_01_preview = "2023-12-01-preview"
-    v2023_10_01_preview = "2023-10-01-preview"
-    v2023_09_01_preview = "2023-09-01-preview"
-    v2023_08_01_preview = "2023-08-01-preview"
-    v2023_07_01_preview = "2023-07-01-preview"
+from ..utils import parse_functions
 
 
 class AzureLLMConfig(BaseModel):
@@ -31,29 +24,32 @@ class AzureLLMConfig(BaseModel):
         ],
     )
     api_key: str = Field(..., description="API key for the Azure OpenAI service")
-    api_version: AzureOpenAIAPIVersions = Field(
-        # ...,
+    api_version: Literal[
+        "2023-07-01-preview",
+        "2023-08-01-preview",
+        "2023-09-01-preview",
+        "2023-10-01-preview",
+        "2023-12-01-preview",
+    ] = Field(
         description="API version for the Azure OpenAI service",
         examples=["2023-12-01-preview"],
-        default=AzureOpenAIAPIVersions.v2023_12_01_preview,
+        default="2023-12-01-preview",
     )
 
     api_type: Literal["azure"] = Field("azure")
 
 
-class OpenAIModel(str, Enum):
-    gpt_4 = "gpt-4"
-    gpt_4_1106_preview = "gpt-4-1106-preview"
-    gpt_4_0613 = "gpt-4-0613"
-    gpt_3_5_turbo = "gpt-3.5-turbo"
-    gpt_3_5_turbo_1106 = "gpt-3.5-turbo-1106"
-    gpt_3_5_turbo_0613 = "gpt-3.5-turbo-0613"
-
-
 class OpenAILLMConfig(BaseModel):
     """OpenAI LLM Configuration"""
 
-    model: OpenAIModel = Field(
+    model: Literal[
+        "gpt-4",
+        "gpt-4-1106-preview",
+        "gpt-4-0613",
+        "gpt-3.5-turbo",
+        "gpt-3.5-turbo-1106",
+        "gpt-3.5-turbo-0613",
+    ] = Field(
         ...,
         description="Deployment name of the model",
         examples=["gpt-4", "gpt-3.5-turbo-1106"],
@@ -62,11 +58,14 @@ class OpenAILLMConfig(BaseModel):
 
 
 AgentT = TypeVar("AgentT", bound=Agent)
+AgentU = TypeVar("AgentU", bound=Agent)
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 
 
 class AutogenAgent(Generic[AgentT]):
-    def __init__(self, agent_cls: Type[AgentT]) -> None:
+    def __init__(self, agent_cls: Type[AgentT], *args: Any, **kwargs: Any) -> None:
+        self._args = args
+        self._kwargs = kwargs
         self._agent_cls: Type[AgentT] = agent_cls
         self._agent: Optional[AgentT] = None
         self._functions: List[Callable[..., Any]] = []
@@ -76,25 +75,34 @@ class AutogenAgent(Generic[AgentT]):
         self._functions.append(func)
         return func
 
-    def system_message(self, message: str) -> None:
-        self._system_message = message
+    def _create_agent(self) -> None:
+        functions = parse_functions(self._functions)
 
-    def _create_agent(self) -> AgentT:
-        agent: AgentT = self._agent_cls()
-        self._agent = agent
-        return agent
+        self._agent = self._agent_cls(*self._args, **self._kwargs, functions=functions)
+
+    def start_conversation(
+        self, agent: "AutogenAgent[Any]", initial_message: str
+    ) -> Any:
+        self._create_agent()
+        agent._create_agent()
+        return self._agent.start_conversation(initial_message)  # type: ignore[union-attr]
 
 
-class AutogenTeam:
-    def __init__(self) -> None:
-        self._group_chat: GroupChat = GroupChat()
-        self._agents: List[AutogenAgent[Any]] = []
+# class AutogenTeam:
+#     def __init__(self, *args: Any, **kwargs: Any) -> None:
+#         self._args = args
+#         self._kwargs = kwargs
+#         self._group_chat: Optional[GroupChat] = None
+#         self._agents: List[AutogenAgent[Any]] = []
 
-    def add_agent(self, agent: AutogenAgent[Any]) -> None:
-        self._agents.append(agent)
+#     def add_agent(self, agent: AutogenAgent[Any]) -> None:
+#         self._agents.append(agent)
 
-    def start_chat(self, initial_mesage: str) -> None:
-        raise NotImplementedError
+#     def create(self) -> GroupChat:
+#         group_chat = GroupChat(*self._args, **self._kwargs)
+#         self._group_chat = group_chat
 
-    async def a_start_chat(self, initial_mesage: str) -> None:
-        raise NotImplementedError
+#         return group_chat
+
+#     def start_chat(self, initial_message: str) -> None:
+#         self._group_chat.initiate_chat(initial_message)

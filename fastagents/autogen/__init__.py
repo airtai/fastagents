@@ -1,3 +1,11 @@
-from .agent import AutogenAgent
+from .agent import (
+    AutogenAgent,
+    AzureLLMConfig,
+    OpenAILLMConfig,
+)
 
-__all__ = ["AutogenAgent"]
+__all__ = [
+    "AutogenAgent",
+    "AzureLLMConfig",
+    "OpenAILLMConfig",
+]
