@@ -39,7 +39,7 @@ class Functions(BaseModel):
     )
 
 
-def _parse_function(f: Callable[..., Any]) -> FunctionInner:
+def _parse_function(f: Callable[..., Any]) -> Function:
     """Parse a function into a Function object"""
     type_hints = get_type_hints(f)
     # check that we have all type hints for non-default variables
@@ -63,10 +63,12 @@ def _parse_function(f: Callable[..., Any]) -> FunctionInner:
         if parsed_docstring and parsed_docstring.short_description is not None
         else f.__name__
     )
-    function = FunctionInner(
-        description=f_description,
-        name=f.__name__,
-        parameters=parameters,
+    function = Function(
+        function=FunctionInner(
+            description=f_description,
+            name=f.__name__,
+            parameters=parameters,
+        )
     )
 
     return function

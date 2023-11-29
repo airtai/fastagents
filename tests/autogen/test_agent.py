@@ -1,14 +1,33 @@
-from unittest.mock import patch
+import unittest
+from unittest.mock import MagicMock, patch
 
 import pytest
 from autogen.agentchat import AssistantAgent
 from autogen.oai.client import OpenAIWrapper
+from pydantic import BaseModel
 
-from fastagents.autogen.agent import (
+from fastagents.autogen import (
     AutogenAgent,
     AzureLLMConfig,
+    BaseUrl,
     OpenAILLMConfig,
 )
+
+
+class TestBaseUrl:
+    class MyBaseUrl(BaseModel):
+        base_url: BaseUrl
+
+    def test_correct(self) -> None:
+        my_base_url = TestBaseUrl.MyBaseUrl(
+            base_url="https://my-openai-canada.openai.azure.com"
+        )
+        assert my_base_url.base_url == "https://my-openai-canada.openai.azure.com"
+
+    def test_ending_with_slash(self) -> None:
+        with pytest.raises(ValueError) as e:
+            TestBaseUrl.MyBaseUrl(base_url="https://my-openai-canada.openai.azure.com/")
+        assert "Base URL must not end with a slash" in str(e.value)
 
 
 class TestAzureLLMConfig:
@@ -62,9 +81,20 @@ class TestAzureOpenAIConfig:
 
 class TestAutogenAgent:
     def test___init__(self) -> None:
-        agent = AutogenAgent(AssistantAgent)
+        agent = AutogenAgent(
+            AssistantAgent,
+            system_message="Hello, I am an autogen agent",
+            config_list=[
+                OpenAILLMConfig(
+                    model="gpt-4-1106-preview",
+                    api_key="my-api-key",  # pragma: allowlist secret
+                )
+            ],
+        )
+
+        assert agent._agent_cls == AssistantAgent, agent._agent_cls
         assert agent._functions == []
-        assert agent._system_message == ""
+        assert agent._kwargs["system_message"] == "Hello, I am an autogen agent"
 
     def test_function(self) -> None:
         agent = AutogenAgent(AssistantAgent)
@@ -90,3 +120,95 @@ class TestAutogenAgent:
             return a * b
 
         assert set(agent._functions) == {add_numbers, multiply_numbers}
+
+    def test_create_agent(self) -> None:
+        with unittest.mock.patch.object(
+            AssistantAgent, "register_function", return_value=None
+        ) as mock_register_function:
+            agent = AutogenAgent(AssistantAgent)
+
+            def add_numbers(a: float, b: float) -> float:
+                """Add two numbers together
+
+                Args:
+                    a (float): first number
+                    b (float): second number
+                """
+                return a + b
+
+            @agent.function
+            def multiply_numbers(a: float, b: float) -> float:
+                """Multiply two numbers together
+
+                Args:
+                    a (float): first number
+                    b (float): second number
+                """
+                return a * b
+
+            agent._functions = [add_numbers, multiply_numbers]
+
+            mock_agent_cls = agent._agent_cls = MagicMock(
+                return_value=AssistantAgent(name="test")
+            )
+            agent._create_agent()
+
+            # First, check that the mock was calleda
+            mock_agent_cls.assert_called_once()
+
+            # Next, check that the mock was called with the correct arguments
+            expected_kwargs = {
+                "functions": {
+                    "description": "A list of functions the model may generate JSON inputs for.",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": [
+                        {
+                            "type": "function",
+                            "function": {
+                                "description": "Add two numbers together",
+                                "name": "add_numbers",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "a": {
+                                            "type": "float",
+                                            "description": "first number",
+                                        },
+                                        "b": {
+                                            "type": "float",
+                                            "description": "second number",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "description": "Multiply two numbers together",
+                                "name": "multiply_numbers",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "a": {
+                                            "type": "float",
+                                            "description": "first number",
+                                        },
+                                        "b": {
+                                            "type": "float",
+                                            "description": "second number",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                }
+            }
+            mock_agent_cls.assert_called_once_with(**expected_kwargs)
+
+            # Finally, check that the register_function was called with the correct arguments
+            mock_register_function.assert_called_once_with(
+                {"add_numbers": add_numbers, "multiply_numbers": multiply_numbers}
+            )

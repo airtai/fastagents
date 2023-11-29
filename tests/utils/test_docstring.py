@@ -1,6 +1,5 @@
-import pytest
-
-from fastagents.utils.docstring import _parse_function
+from fastagents.utils import parse_functions
+from fastagents.utils.docstring import Functions, _parse_function
 
 
 def multiply_numbers(a: float, b: float) -> float:
@@ -28,18 +27,21 @@ def substract_numbers(a, b) -> float:  # type: ignore[no-untyped-def]
 
 def test_parse_function() -> None:
     expected = """{
-  "description": "Multiply two numbers together",
-  "name": "multiply_numbers",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "a": {
-        "type": "float",
-        "description": "first number"
-      },
-      "b": {
-        "type": "float",
-        "description": "second number"
+  "type": "function",
+  "function": {
+    "description": "Multiply two numbers together",
+    "name": "multiply_numbers",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "float",
+          "description": "first number"
+        },
+        "b": {
+          "type": "float",
+          "description": "second number"
+        }
       }
     }
   }
@@ -50,18 +52,21 @@ def test_parse_function() -> None:
 
 def test_parse_uncomplete_function() -> None:
     expected = """{
-  "description": "Add two numbers together",
-  "name": "add_numbers",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "a": {
-        "type": "float",
-        "description": "first number"
-      },
-      "b": {
-        "type": "float",
-        "description": "b"
+  "type": "function",
+  "function": {
+    "description": "Add two numbers together",
+    "name": "add_numbers",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "float",
+          "description": "first number"
+        },
+        "b": {
+          "type": "float",
+          "description": "b"
+        }
       }
     }
   }
@@ -70,29 +75,56 @@ def test_parse_uncomplete_function() -> None:
     assert actual == expected, actual
 
 
-@pytest.mark.skip(reason="Not implemented yet")
 def test_parse_functions() -> None:
-    pass
-
-
-@pytest.mark.skip(reason="Not implemented yet")
-def test_parse_barebone_function() -> None:
     expected = """{
-  "description": "Add two numbers together",
-  "name": "add_numbers",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "a": {
-        "type": "float",
-        "description": "first number"
-      },
-      "b": {
-        "type": "float",
-        "description": "b"
+  "description": "A list of functions the model may generate JSON inputs for.",
+  "type": "array",
+  "minItems": 1,
+  "items": [
+    {
+      "type": "function",
+      "function": {
+        "description": "Multiply two numbers together",
+        "name": "multiply_numbers",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "a": {
+              "type": "float",
+              "description": "first number"
+            },
+            "b": {
+              "type": "float",
+              "description": "second number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "description": "Add two numbers together",
+        "name": "add_numbers",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "a": {
+              "type": "float",
+              "description": "first number"
+            },
+            "b": {
+              "type": "float",
+              "description": "b"
+            }
+          }
+        }
       }
     }
-  }
+  ]
 }"""
-    actual = _parse_function(substract_numbers).model_dump_json(indent=2)
-    assert actual == expected, actual
+    actual = parse_functions([multiply_numbers, add_numbers])
+    assert isinstance(actual, Functions)
+    assert actual.model_dump_json(indent=2) == expected, actual.model_dump_json(
+        indent=2
+    )

@@ -1,10 +1,26 @@
 from typing import Any, Callable, Generic, List, Optional, Type, TypeVar
 
 from autogen.agentchat import Agent
-from pydantic import BaseModel, Field
-from typing_extensions import Literal
+from pydantic import BaseModel, Field, HttpUrl
+from pydantic.functional_validators import AfterValidator
+from typing_extensions import Annotated, Literal
 
 from ..utils import parse_functions
+
+
+def _check_base_url_end(base_url: str) -> str:
+    # validate it is a valid URL
+    HttpUrl(base_url)
+
+    # make sure it does not end with a slash
+    if base_url.endswith("/"):
+        raise ValueError("Base URL must not end with a slash")
+
+    # return unchanged
+    return base_url
+
+
+BaseUrl = Annotated[str, AfterValidator(_check_base_url_end)]
 
 
 class AzureLLMConfig(BaseModel):
@@ -15,7 +31,7 @@ class AzureLLMConfig(BaseModel):
         description="Deployment name of the model",
         examples=["canada-gpt4", "sweden-gpt3.5"],
     )
-    base_url: str = Field(
+    base_url: BaseUrl = Field(
         ...,
         description="Base URL of the Azure OpenAI service",
         examples=[
@@ -25,11 +41,11 @@ class AzureLLMConfig(BaseModel):
     )
     api_key: str = Field(..., description="API key for the Azure OpenAI service")
     api_version: Literal[
-        "2023-07-01-preview",
-        "2023-08-01-preview",
-        "2023-09-01-preview",
-        "2023-10-01-preview",
         "2023-12-01-preview",
+        "2023-10-01-preview",
+        "2023-09-01-preview",
+        "2023-08-01-preview",
+        "2023-07-01-preview",
     ] = Field(
         description="API version for the Azure OpenAI service",
         examples=["2023-12-01-preview"],
@@ -63,29 +79,56 @@ CallableT = TypeVar("CallableT", bound=Callable[..., Any])
 
 
 class AutogenAgent(Generic[AgentT]):
-    def __init__(self, agent_cls: Type[AgentT], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        agent_cls: Type[AgentT],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         self._args = args
         self._kwargs = kwargs
         self._agent_cls: Type[AgentT] = agent_cls
         self._agent: Optional[AgentT] = None
         self._functions: List[Callable[..., Any]] = []
-        self._system_message: Optional[str] = ""
 
     def function(self, func: CallableT) -> CallableT:
+        """Register a function with the agent
+
+        Args:
+            func(CallableT) : function to register
+
+        Returns:
+            function: function that was registered
+
+        Raises:
+            ValueError: if a function with the same name is already registered
+        """
+        if func.__name__ in [f.__name__ for f in self._functions]:
+            raise ValueError(f"Function with name {func.__name__} already registered.")
         self._functions.append(func)
+
         return func
 
     def _create_agent(self) -> None:
-        functions = parse_functions(self._functions)
+        if self._functions != []:
+            agent = self._agent_cls(
+                *self._args,
+                functions=parse_functions(self._functions).model_dump(),
+                **self._kwargs,
+            )
+            agent.register_function({f.__name__: f for f in self._functions})
 
-        self._agent = self._agent_cls(*self._args, **self._kwargs, functions=functions)
+        else:
+            agent = self._agent_cls(*self._args, **self._kwargs)
 
-    def start_conversation(
-        self, agent: "AutogenAgent[Any]", initial_message: str
+        self._agent = agent
+
+    def initiate_chat(
+        self, agent: "AutogenAgent[Any]", *args: Any, message: str, **kwargs: Any
     ) -> Any:
         self._create_agent()
         agent._create_agent()
-        return self._agent.start_conversation(initial_message)  # type: ignore[union-attr]
+        return self._agent.initiate_chat(agent._agent, *args, message=message, **kwargs)  # type: ignore[union-attr]
 
 
 # class AutogenTeam:
