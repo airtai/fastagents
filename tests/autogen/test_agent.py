@@ -289,8 +289,12 @@ class TestAutogenAgent:
 
             agent._functions = [add_numbers, multiply_numbers]
 
+            llm_config = agent._create_llm_config()
+            # print(llm_config.model_dump_json(indent=2))
             mock_agent_cls = agent._agent_cls = MagicMock(
-                return_value=AssistantAgent(name="test")
+                return_value=AssistantAgent(
+                    name="test", llm_config=llm_config.model_dump()
+                )
             )
             agent._create_agent()
 
