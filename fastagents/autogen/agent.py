@@ -1,11 +1,11 @@
-from typing import Any, Callable, Generic, List, Optional, Type, TypeVar
+from typing import Any, Callable, Generic, List, Optional, Type, TypeVar, Union
 
 from autogen.agentchat import Agent
 from pydantic import BaseModel, Field, HttpUrl
 from pydantic.functional_validators import AfterValidator
 from typing_extensions import Annotated, Literal
 
-from ..utils import parse_functions
+from ..utils import Functions, parse_functions
 
 
 def _check_base_url_end(base_url: str) -> str:
@@ -73,6 +73,14 @@ class OpenAILLMConfig(BaseModel):
     api_key: str = Field(..., description="API key for the OpenAI service")
 
 
+class LLMConfig(BaseModel):
+    functions: Functions = Field(..., description="Functions for the LLM")
+    config_list: List[Union[AzureLLMConfig, OpenAILLMConfig]] = Field(
+        ..., description="List of LLM configurations"
+    )
+    timeout: int = Field(60, description="Timeout for the LLM")
+
+
 AgentT = TypeVar("AgentT", bound=Agent)
 AgentU = TypeVar("AgentU", bound=Agent)
 CallableT = TypeVar("CallableT", bound=Callable[..., Any])
@@ -83,10 +91,12 @@ class AutogenAgent(Generic[AgentT]):
         self,
         agent_cls: Type[AgentT],
         *args: Any,
+        config_list: List[Union[AzureLLMConfig, OpenAILLMConfig]],
         **kwargs: Any,
     ) -> None:
         self._args = args
         self._kwargs = kwargs
+        self._config_list = config_list
         self._agent_cls: Type[AgentT] = agent_cls
         self._agent: Optional[AgentT] = None
         self._functions: List[Callable[..., Any]] = []
@@ -109,17 +119,22 @@ class AutogenAgent(Generic[AgentT]):
 
         return func
 
-    def _create_agent(self) -> None:
-        if self._functions != []:
-            agent = self._agent_cls(
-                *self._args,
-                functions=parse_functions(self._functions).model_dump(),
-                **self._kwargs,
-            )
-            agent.register_function({f.__name__: f for f in self._functions})
+    def _create_llm_config(self) -> LLMConfig:
+        functions = parse_functions(self._functions)
+        return LLMConfig(
+            functions=functions,
+            config_list=self._config_list,
+            timeout=self._kwargs.get("timeout", 60),
+        )
 
-        else:
-            agent = self._agent_cls(*self._args, **self._kwargs)
+    def _create_agent(self) -> None:
+        # if self._functions != []:
+        agent = self._agent_cls(
+            *self._args,
+            llm_config=self._create_llm_config().model_dump(),
+            **self._kwargs,
+        )
+        agent.register_function({f.__name__: f for f in self._functions})
 
         self._agent = agent
 

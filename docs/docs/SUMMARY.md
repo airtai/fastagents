@@ -9,8 +9,10 @@
             - agent
                 - [AutogenAgent](api/fastagents/autogen/agent/AutogenAgent.md)
                 - [AzureLLMConfig](api/fastagents/autogen/agent/AzureLLMConfig.md)
+                - [LLMConfig](api/fastagents/autogen/agent/LLMConfig.md)
                 - [OpenAILLMConfig](api/fastagents/autogen/agent/OpenAILLMConfig.md)
         - utils
+            - [Functions](api/fastagents/utils/Functions.md)
             - [parse_functions](api/fastagents/utils/parse_functions.md)
             - docstring
                 - [Function](api/fastagents/utils/docstring/Function.md)

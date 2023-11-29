@@ -1,3 +1,3 @@
-from .docstring import parse_functions
+from .docstring import Functions, parse_functions
 
-__all__ = ["parse_functions"]
+__all__ = ["Functions", "parse_functions"]

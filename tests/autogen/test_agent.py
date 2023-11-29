@@ -12,6 +12,8 @@ from fastagents.autogen import (
     BaseUrl,
     OpenAILLMConfig,
 )
+from fastagents.autogen.agent import LLMConfig
+from fastagents.utils.docstring import Functions
 
 
 class TestBaseUrl:
@@ -97,7 +99,15 @@ class TestAutogenAgent:
         assert agent._kwargs["system_message"] == "Hello, I am an autogen agent"
 
     def test_function(self) -> None:
-        agent = AutogenAgent(AssistantAgent)
+        agent = AutogenAgent(
+            AssistantAgent,
+            config_list=[
+                OpenAILLMConfig(
+                    model="gpt-4",
+                    api_key="api-key",  # pragma: allowlist secret
+                )
+            ],
+        )
 
         @agent.function
         def add_numbers(a: float, b: float) -> float:
@@ -121,11 +131,114 @@ class TestAutogenAgent:
 
         assert set(agent._functions) == {add_numbers, multiply_numbers}
 
+    def test_create_llm_config(self) -> None:
+        agent = AutogenAgent(
+            AssistantAgent,
+            config_list=[
+                OpenAILLMConfig(
+                    model="gpt-4",
+                    api_key="api-key",  # pragma: allowlist secret
+                )
+            ],
+        )
+
+        def add_numbers(a: float, b: float) -> float:
+            """Add two numbers together
+
+            Args:
+                a (float): first number
+                b (float): second number
+            """
+            return a + b
+
+        def multiply_numbers(a: float, b: float) -> float:
+            """Multiply two numbers together
+
+            Args:
+                a (float): first number
+                b (float): second number
+            """
+            return a * b
+
+        agent._functions = [add_numbers, multiply_numbers]
+
+        llm_config = agent._create_llm_config()
+
+        assert isinstance(llm_config, LLMConfig)
+        assert isinstance(llm_config.functions, Functions)
+
+        # pragma: allowlist secret
+        expected = """{
+  "functions": {
+    "description": "A list of functions the model may generate JSON inputs for.",
+    "type": "array",
+    "minItems": 1,
+    "items": [
+      {
+        "type": "function",
+        "function": {
+          "description": "Add two numbers together",
+          "name": "add_numbers",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "a": {
+                "type": "float",
+                "description": "first number"
+              },
+              "b": {
+                "type": "float",
+                "description": "second number"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "function",
+        "function": {
+          "description": "Multiply two numbers together",
+          "name": "multiply_numbers",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "a": {
+                "type": "float",
+                "description": "first number"
+              },
+              "b": {
+                "type": "float",
+                "description": "second number"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "config_list": [
+    {
+      "model": "gpt-4",
+      "api_key": "api-key"
+    }
+  ],
+  "timeout": 60
+}"""  # pragma: allowlist secret
+
+        assert llm_config.model_dump_json(indent=2) == expected
+
     def test_create_agent(self) -> None:
         with unittest.mock.patch.object(
             AssistantAgent, "register_function", return_value=None
         ) as mock_register_function:
-            agent = AutogenAgent(AssistantAgent)
+            agent = AutogenAgent(
+                AssistantAgent,
+                config_list=[
+                    OpenAILLMConfig(
+                        model="gpt-4", api_key="api-key"  # pragma: allowlist secret
+                    )
+                ],
+            )
 
             def add_numbers(a: float, b: float) -> float:
                 """Add two numbers together
@@ -206,6 +319,7 @@ class TestAutogenAgent:
                     ],
                 }
             }
+            print(mock_agent_cls.call_args_list)
             mock_agent_cls.assert_called_once_with(**expected_kwargs)
 
             # Finally, check that the register_function was called with the correct arguments
