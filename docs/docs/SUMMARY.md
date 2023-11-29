@@ -4,6 +4,21 @@
         - [AutogenAgent](api/fastagents/AutogenAgent.md)
         - autogen
             - [AutogenAgent](api/fastagents/autogen/AutogenAgent.md)
+            - [AzureLLMConfig](api/fastagents/autogen/AzureLLMConfig.md)
+            - [OpenAILLMConfig](api/fastagents/autogen/OpenAILLMConfig.md)
             - agent
                 - [AutogenAgent](api/fastagents/autogen/agent/AutogenAgent.md)
+                - [AzureLLMConfig](api/fastagents/autogen/agent/AzureLLMConfig.md)
+                - [LLMConfig](api/fastagents/autogen/agent/LLMConfig.md)
+                - [OpenAILLMConfig](api/fastagents/autogen/agent/OpenAILLMConfig.md)
+        - utils
+            - [Functions](api/fastagents/utils/Functions.md)
+            - [parse_functions](api/fastagents/utils/parse_functions.md)
+            - docstring
+                - [Function](api/fastagents/utils/docstring/Function.md)
+                - [FunctionInner](api/fastagents/utils/docstring/FunctionInner.md)
+                - [Functions](api/fastagents/utils/docstring/Functions.md)
+                - [Parameter](api/fastagents/utils/docstring/Parameter.md)
+                - [Parameters](api/fastagents/utils/docstring/Parameters.md)
+                - [parse_functions](api/fastagents/utils/docstring/parse_functions.md)
 - [Release Notes](release.md)
