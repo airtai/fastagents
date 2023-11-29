@@ -91,13 +91,15 @@ class AutogenAgent(Generic[AgentT]):
         self,
         agent_cls: Type[AgentT],
         *args: Any,
-        config_list: List[Union[AzureLLMConfig, OpenAILLMConfig]],
+        config_list: Optional[List[Union[AzureLLMConfig, OpenAILLMConfig]]] = None,
         **kwargs: Any,
     ) -> None:
+        self._agent_cls: Type[AgentT] = agent_cls
         self._args = args
         self._kwargs = kwargs
-        self._config_list = config_list
-        self._agent_cls: Type[AgentT] = agent_cls
+        self._config_list: List[Union[AzureLLMConfig, OpenAILLMConfig]] = (
+            [] if config_list is None else config_list
+        )
         self._agent: Optional[AgentT] = None
         self._functions: List[Callable[..., Any]] = []
 

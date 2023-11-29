@@ -12,8 +12,36 @@ from fastagents.autogen import (
     BaseUrl,
     OpenAILLMConfig,
 )
-from fastagents.autogen.agent import LLMConfig
+from fastagents.autogen.agent import LLMConfig, _check_base_url_end
 from fastagents.utils.docstring import Functions
+
+
+def test_check_base_url_end() -> None:
+    correct_urls = [
+        "https://my-openai-canada.openai.azure.com",
+        "https://127.0.0.1:8000",
+        "http://localhost",
+    ]
+    for url in correct_urls:
+        assert _check_base_url_end(url) == url, _check_base_url_end(url)
+
+    incorrect_urls = [
+        "https//my-openai-canada.openai.azure.com",
+        "https://  my-openai-canada.openai.azure.com",
+    ]
+    for url in incorrect_urls:
+        with pytest.raises(ValueError):
+            _check_base_url_end(url)
+
+    urls_ending_with_slash = [
+        "https://my-openai-canada.openai.azure.com/",
+        "https://127.0.0.1:8000/",
+        "http://localhost/",
+    ]
+    for url in urls_ending_with_slash:
+        # print(url)
+        with pytest.raises(ValueError):
+            _check_base_url_end(url)
 
 
 class TestBaseUrl:
@@ -271,58 +299,64 @@ class TestAutogenAgent:
 
             # Next, check that the mock was called with the correct arguments
             expected_kwargs = {
-                "functions": {
-                    "description": "A list of functions the model may generate JSON inputs for.",
-                    "type": "array",
-                    "minItems": 1,
-                    "items": [
-                        {
-                            "type": "function",
-                            "function": {
-                                "description": "Add two numbers together",
-                                "name": "add_numbers",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "a": {
-                                            "type": "float",
-                                            "description": "first number",
-                                        },
-                                        "b": {
-                                            "type": "float",
-                                            "description": "second number",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        {
-                            "type": "function",
-                            "function": {
-                                "description": "Multiply two numbers together",
-                                "name": "multiply_numbers",
-                                "parameters": {
-                                    "type": "object",
-                                    "properties": {
-                                        "a": {
-                                            "type": "float",
-                                            "description": "first number",
-                                        },
-                                        "b": {
-                                            "type": "float",
-                                            "description": "second number",
+                "llm_config": {
+                    "functions": {
+                        "description": "A list of functions the model may generate JSON inputs for.",
+                        "type": "array",
+                        "minItems": 1,
+                        "items": [
+                            {
+                                "type": "function",
+                                "function": {
+                                    "description": "Add two numbers together",
+                                    "name": "add_numbers",
+                                    "parameters": {
+                                        "type": "object",
+                                        "properties": {
+                                            "a": {
+                                                "type": "float",
+                                                "description": "first number",
+                                            },
+                                            "b": {
+                                                "type": "float",
+                                                "description": "second number",
+                                            },
                                         },
                                     },
                                 },
                             },
-                        },
-                    ],
-                }
+                            {
+                                "type": "function",
+                                "function": {
+                                    "description": "Multiply two numbers together",
+                                    "name": "multiply_numbers",
+                                    "parameters": {
+                                        "type": "object",
+                                        "properties": {
+                                            "a": {
+                                                "type": "float",
+                                                "description": "first number",
+                                            },
+                                            "b": {
+                                                "type": "float",
+                                                "description": "second number",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                    "config_list": [{"model": "gpt-4", "api_key": "api-key"}],
+                    "timeout": 60,
+                },
             }
-            print(mock_agent_cls.call_args_list)
             mock_agent_cls.assert_called_once_with(**expected_kwargs)
 
             # Finally, check that the register_function was called with the correct arguments
             mock_register_function.assert_called_once_with(
                 {"add_numbers": add_numbers, "multiply_numbers": multiply_numbers}
             )
+
+        def test_initiate_chat() -> None:
+            pass
